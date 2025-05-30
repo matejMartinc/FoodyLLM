@@ -1,0 +1,9 @@
+*.npy
+*.pyc
+.idea
+data*
+results*
+test_sets*
+train_sets*
+models*
+
