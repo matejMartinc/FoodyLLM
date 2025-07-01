@@ -22,10 +22,10 @@ def cv_split(df, output_name):
 
 
 def preprocess_ner():
-    datasets = ['datasets/CafeteriaFCD_instruction_response.txt',
-                'datasets/CafeteriaSA_instruction_response.txt']
+    datasets = ['datasets/NER and NEL/CafeteriaFCD_instruction_response.txt',
+                'datasets/NER and NEL/CafeteriaSA_instruction_response.txt']
     for dt_path in datasets:
-        output_name = dt_path.split('/')[1].replace(' ', '_').split('.')[0]
+        output_name = dt_path.split('/')[-1].replace(' ', '_').split('.')[0]
         kf = KFold(n_splits=5, shuffle=True, random_state=123)
         with open(dt_path, 'r', encoding='utf8') as f:
             df = pd.DataFrame(f.readlines(), columns=['text'])
@@ -74,13 +74,13 @@ def preprocess_ner():
 
 
 def preprocess_nel_bootstrap():
-    datasets = ['datasets/FCD_foodon_instruction_response.txt',
-                'datasets/FCD_hansard_instruction_response.txt',
-                'datasets/FCD_snomed_ct_instruction_response.txt']
+    datasets = ['datasets/NEL bootstrap samples/FCD_foodon_instruction_response.txt',
+                'datasets/NEL bootstrap samples/FCD_hansard_instruction_response.txt',
+                'datasets/NEL bootstrap samples/FCD_snomed_ct_instruction_response.txt']
 
     for ds in datasets:
         dataset = []
-        output_name = ds.split('/')[1].replace(' ', '_').split('.')[0]
+        output_name = ds.split('/')[-1].replace(' ', '_').split('.')[0]
         with open(ds, 'r', encoding='utf8') as f:
             docs = f.readlines()
             for line in docs:

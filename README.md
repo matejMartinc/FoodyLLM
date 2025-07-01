@@ -10,6 +10,11 @@ More specifically, it can conduct the following tasks:
 - Extract food named entities from text (Food NER)
 - Link the food entities to three distinct ontologies, Hansard taxonomy, FoodOn and SNOMED-CT (Food NEL)
 
+
+## Datasets ##
+
+TODO: All datasets will be added soon!
+
 ## Installation, documentation ##
 
 Published results were produced in Python 3.12 programming environment on AlmaLinux 8.10 (Cerulean Leopard) operating system. Instructions for installation assume the usage of PyPI package manager and availability of CUDA (we use version 12.8).<br/>
@@ -20,7 +25,7 @@ Install dependencies if needed: pip install -r requirements.txt
 
 ### To reproduce the results published in the paper, run the code in the command line using following commands: ###
 
-Data preprocessing - split the NEL and NER datasets into 5 train and test fold and make it appropriate to feed into language model:<br/>
+Data preprocessing - split  datasets into 5 train and test folds and make it appropriate to feed into language model:<br/>
 
 ```
 python preprocess.py
