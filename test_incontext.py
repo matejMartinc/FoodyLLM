@@ -50,7 +50,7 @@ if __name__ == '__main__':
     TEST_SET_PATH = 'test_sets_all_data_enriched_clean'
     base_model = "meta-llama/Meta-Llama-3-8B-Instruct"
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    settings = ['five-shot']
+    settings = ['zero-shot', 'one-shot', 'five-shot']
 
     folds = ['split_0', 'split_1', 'split_2', 'split_3', 'split_4']
     test_batch = 16
