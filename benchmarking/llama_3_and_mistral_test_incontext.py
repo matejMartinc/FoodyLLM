@@ -50,17 +50,21 @@ def add_examples(df_sample_dataset, user_prompt, setting, div):
 if __name__ == '__main__':
     #change path to test sets if needed
     TEST_SET_PATH = 'test_sets_all_data'
+    #Uncomment the model you want to use, Mistral or Llama
     base_model = "meta-llama/Meta-Llama-3-8B-Instruct"
+    #base_model = "mistralai/Mistral-Small-24B-Instruct-2501"
+    suffix = '_Mistral-Small-24B-Instruct-2501/'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     settings = ['zero-shot', 'one-shot', 'five-shot']
     folds = ['split_0', 'split_1', 'split_2', 'split_3', 'split_4']
-    test_batch = 16
+    test_batch = 12
     for setting in settings:
         for fold in folds:
             # Loading a dataset
             print('Fold: ', fold)
             test_folder = os.path.join(TEST_SET_PATH, fold)
 
+            # Load base model(Mistral 7B)
             bnb_config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_quant_type="nf4",
@@ -92,6 +96,10 @@ if __name__ == '__main__':
                 all_data = []
                 if '_combined.tsv' not in td:
                     print('Testing on ', td)
+                    results_output = "results/" + setting + suffix + td.split('.')[0] + '_' + fold + ".tsv"
+                    if os.path.isfile(results_output):
+                        print('Skipping, since the file already exists', results_output)
+                        continue
                     df_sample_dataset = get_train_path(test_folder, td)
                     if 'ner' not in td:
                         current_batch = test_batch
@@ -111,7 +119,6 @@ if __name__ == '__main__':
                         true_prompts = []
                         for user_prompt in examples['instruction']:
                             original_prompts.append(user_prompt)
-                            # print("List of instructions: ", all_questions)
                             system_prompt = ''
                             get_answer = False
                             if not '</div>' in user_prompt:
@@ -137,7 +144,7 @@ if __name__ == '__main__':
                         inputs = tokenizer(tokenizer_input, return_tensors="pt", padding=True, truncation=True, max_length=2048).to(device)
                         generated_ids = model.generate(**inputs, max_new_tokens=1024, do_sample=True)
                         answers = tokenizer.batch_decode(generated_ids[:, inputs['input_ids'].shape[1]:])
-                        answers = [(" ".join((x.split('<|end_of_text|>')[0].split('<|im_end|>')[0]).split('<|eot_id|>')[0].split())).strip() for x in answers]
+                        answers = [(" ".join((x.split('</s>')[0].split('<|end_of_text|>')[0].split('<|im_end|>')[0]).split('<|eot_id|>')[0].split())).strip() for x in answers]
                         if get_answer:
                             prev_answer = answers[0]
 
@@ -147,17 +154,14 @@ if __name__ == '__main__':
                         batched_examples = zip(original_prompts, tokenizer_input, answers, true_outputs)
                         all_data.extend(batched_examples)
 
+
                     df = pd.DataFrame(all_data, columns=['Original prompt', 'True prompt', 'Answer', 'True'])
-                    if not os.path.exists("results/" + setting ):
-                        os.makedirs("results/" + setting)
-                    results_output = "results/" + setting + td.split('.')[0] + '_' + fold + ".tsv"
+                    if not os.path.exists("results/" + setting + suffix):
+                        os.makedirs("results/" + setting + suffix)
+
                     df.to_csv(results_output, encoding='utf8', sep='\t', index=False)
             del model
             del tokenizer
-
-
-
-
 
 
 

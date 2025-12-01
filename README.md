@@ -55,6 +55,21 @@ Additionally, we offer script that we used for our baseline zero-shot and few-sh
 python test_incontext.py
 ```
 
+## To reproduce results for our benchmark study titled 'A Domain-Targeted Question-Answering Dataset for Food and Nutrition Applications'
+
+Use the same data preprocessing script as above to preprocess data and generate splits:<br/>
+
+```
+python preprocess.py
+```
+
+Scripts for testing several LLMs in zero-shot and few-shot settings are in the benchmark folder. You can run them with: <br/>
+
+```
+python name_of_the_script.py
+```
+
+Note that to reproduce Gemini-2.5-flash results you need to obtain Gemini API key.<br/>
 
 
 

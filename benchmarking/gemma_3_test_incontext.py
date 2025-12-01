@@ -1,5 +1,5 @@
 import pandas as pd
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoProcessor, Gemma3ForConditionalGeneration
 import os, torch
 import editdistance
 
@@ -50,43 +50,24 @@ def add_examples(df_sample_dataset, user_prompt, setting, div):
 if __name__ == '__main__':
     #change path to test sets if needed
     TEST_SET_PATH = 'test_sets_all_data'
-    base_model = "meta-llama/Meta-Llama-3-8B-Instruct"
+    model_id = "google/gemma-3-4b-it"
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     settings = ['zero-shot', 'one-shot', 'five-shot']
     folds = ['split_0', 'split_1', 'split_2', 'split_3', 'split_4']
-    test_batch = 16
+    test_batch = 24
     for setting in settings:
         for fold in folds:
             # Loading a dataset
             print('Fold: ', fold)
             test_folder = os.path.join(TEST_SET_PATH, fold)
 
-            bnb_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.float16,
-                bnb_4bit_use_double_quant=True,
-            )
+            model = Gemma3ForConditionalGeneration.from_pretrained(
+                model_id, device_map="auto", attn_implementation="eager"
+            ).eval()
+            model = model.bfloat16()
 
-            model = AutoModelForCausalLM.from_pretrained(
-                base_model,
-                quantization_config=bnb_config,
-                device_map={"": 0},
-                attn_implementation="eager"
-            )
+            processor = AutoProcessor.from_pretrained(model_id)
 
-            tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
-            tokenizer.pad_token = tokenizer.eos_token
-
-            def format_chat_template(row):
-                row_json = [{"role": "user", "content": row["instruction"]},
-                            {"role": "assistant", "content": row["output"]}]
-                row["text"] = tokenizer.apply_chat_template(row_json, tokenize=False)
-                row["text"] = row['text'].replace('</div>', '').strip()
-                return row
-
-            model.config.use_cache = True
-            model.eval()
             all_datasets = os.listdir(test_folder)
             for td in all_datasets:
                 all_data = []
@@ -111,7 +92,6 @@ if __name__ == '__main__':
                         true_prompts = []
                         for user_prompt in examples['instruction']:
                             original_prompts.append(user_prompt)
-                            # print("List of instructions: ", all_questions)
                             system_prompt = ''
                             get_answer = False
                             if not '</div>' in user_prompt:
@@ -127,17 +107,25 @@ if __name__ == '__main__':
 
                             messages = [
                                 {
+                                    "role": "system",
+                                    "content": [{"type": "text", "text": f"{system_prompt}".strip()}]
+                                },
+                                {
                                     "role": "user",
-                                    "content": f"{system_prompt} {user_prompt}".strip()
+                                    "content": [
+                                        {"type": "text", "text": f"{user_prompt}".strip()}
+                                    ]
                                 }
                             ]
-                            prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+
+                            prompt = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
                             tokenizer_input.append(prompt)
 
-                        inputs = tokenizer(tokenizer_input, return_tensors="pt", padding=True, truncation=True, max_length=2048).to(device)
-                        generated_ids = model.generate(**inputs, max_new_tokens=1024, do_sample=True)
-                        answers = tokenizer.batch_decode(generated_ids[:, inputs['input_ids'].shape[1]:])
-                        answers = [(" ".join((x.split('<|end_of_text|>')[0].split('<|im_end|>')[0]).split('<|eot_id|>')[0].split())).strip() for x in answers]
+                        inputs = processor(text=tokenizer_input, return_tensors="pt", padding=True, truncation=True, max_length=2048).to(device)
+                        with torch.inference_mode():
+                            generated_ids = model.generate(**inputs, max_new_tokens=1024, do_sample=False)
+                        answers = processor.batch_decode(generated_ids[:, inputs['input_ids'].shape[1]:], skip_special_tokens=True)
+                        answers = [(" ".join((x.split('</s>')[0].split('<|end_of_text|>')[0].split('<|im_end|>')[0]).split('<|eot_id|>')[0].split())).strip() for x in answers]
                         if get_answer:
                             prev_answer = answers[0]
 
@@ -147,17 +135,15 @@ if __name__ == '__main__':
                         batched_examples = zip(original_prompts, tokenizer_input, answers, true_outputs)
                         all_data.extend(batched_examples)
 
+                    suffix = '_gemma-3-4b-it/'
+
                     df = pd.DataFrame(all_data, columns=['Original prompt', 'True prompt', 'Answer', 'True'])
-                    if not os.path.exists("results/" + setting ):
-                        os.makedirs("results/" + setting)
-                    results_output = "results/" + setting + td.split('.')[0] + '_' + fold + ".tsv"
+                    if not os.path.exists("results/" + setting + suffix):
+                        os.makedirs("results/" + setting + suffix)
+                    results_output = "results/" + setting + suffix + td.split('.')[0] + '_' + fold + ".tsv"
                     df.to_csv(results_output, encoding='utf8', sep='\t', index=False)
             del model
-            del tokenizer
-
-
-
-
+            del processor
 
 
 

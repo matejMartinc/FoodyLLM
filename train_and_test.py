@@ -39,6 +39,7 @@ def concat_all(folder_path, adapter_model, shuffle=False, add_data=True):
 
 
 if __name__ == '__main__':
+    #change the paths to data if needed
     TRAIN_SET_PATH = 'train_sets_all_data'
     TEST_SET_PATH = 'test_sets_all_data'
     base_model = "meta-llama/Meta-Llama-3-8B-Instruct"
@@ -47,7 +48,6 @@ if __name__ == '__main__':
     load_adapter = False
     print('Load adapter', load_adapter)
     adapter_model = "foodyLLM-Meta-LLama-3-8B-Instruct"
-
     folds = ['split_0', 'split_1', 'split_2', 'split_3', 'split_4']
     test_batch = 16
     for fold in folds:
